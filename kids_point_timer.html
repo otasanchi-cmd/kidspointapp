@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="ポイントタイマー" />
+  <title>ポイントタイマー</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #fff7ed; color: #1f2937; }
+    .page { min-height: 100vh; max-width: 1120px; margin: 0 auto; padding: 20px 16px env(safe-area-inset-bottom); background: linear-gradient(135deg, #fff7ed, #fffbeb, #eff6ff); }
+    .header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .header h1 { margin: 0; font-size: 22px; } .header p { margin: 4px 0 0; color: #64748b; font-size: 13px; }
+    .headerIcon { width: 48px; height: 48px; border-radius: 18px; background: white; display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 2px 10px rgba(15,23,42,0.08); flex-shrink: 0; }
+    .card { background: rgba(255,255,255,0.92); border-radius: 24px; padding: 18px; box-shadow: 0 4px 18px rgba(15,23,42,0.08); margin-bottom: 14px; }
+    .btn { border: 0; border-radius: 16px; padding: 10px 16px; font-weight: 700; cursor: pointer; transition: transform 0.12s, opacity 0.12s; font-size: 15px; }
+    .btn.primary { background: #f97316; color: white; }
+    .btn.secondary { background: white; color: #334155; border: 1px solid #e2e8f0; }
+    .btn.danger { background: #ef4444; color: white; }
+    .btn.disabled, .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .childSwitch, .noticeBar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; background: rgba(255,255,255,0.75); border-radius: 20px; padding: 12px; margin-bottom: 14px; }
+    .statsGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+    .statsGrid.wide { grid-template-columns: repeat(5, 1fr); }
+    .statsGrid.small { grid-template-columns: repeat(3, 1fr); }
+    .statCard { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; }
+    .statIcon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: #fef3c7; font-size: 18px; flex-shrink: 0; }
+    .statLabel { color: #64748b; font-size: 11px; }
+    .statValue { font-size: 16px; font-weight: 800; }
+    .menuGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .grid3 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .grid4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    @media (min-width: 600px) {
+      .menuGrid { grid-template-columns: repeat(3, 1fr); }
+      .grid3 { grid-template-columns: repeat(3, 1fr); }
+      .grid4 { grid-template-columns: repeat(4, 1fr); }
+      .statsGrid { grid-template-columns: repeat(5, 1fr); }
+    }
+    .itemCard { background: rgba(255,255,255,0.92); border-radius: 22px; padding: 16px; box-shadow: 0 4px 18px rgba(15,23,42,0.08); cursor: pointer; border: 0; text-align: left; width: 100%; }
+    .itemCard.muted { opacity: 0.45; }
+    .bigIcon { font-size: 34px; margin-bottom: 6px; }
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .chip { border-radius: 20px; padding: 3px 9px; font-size: 12px; font-weight: 700; }
+    .chip.plus { background: #dcfce7; color: #16a34a; }
+    .chip.minus { background: #fee2e2; color: #dc2626; }
+    .chip.time { background: #dbeafe; color: #2563eb; }
+    .chip.neutral { background: #f1f5f9; color: #64748b; }
+    .timerCard { text-align: center; padding: 32px 16px; }
+    .timerLabel { color: #64748b; font-size: 14px; margin-bottom: 6px; }
+    .timerDisplay { font-size: clamp(56px, 15vw, 80px); font-weight: 900; letter-spacing: 4px; margin-bottom: 20px; color: #1f2937; }
+    .buttonRow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .centerRow { justify-content: center; }
+    .center { text-align: center; }
+    .gachaCount { font-size: 52px; font-weight: 900; margin: 10px 0; }
+    .resultIcon { font-size: 64px; margin: 14px 0; }
+    .highlight { background: #fef3c7; border-radius: 14px; padding: 12px 16px; font-weight: 800; font-size: 17px; margin: 10px 0; }
+    .successBox { background: #dcfce7; color: #16a34a; border-radius: 14px; padding: 12px 16px; font-weight: 700; margin-bottom: 10px; }
+    .errorText { color: #ef4444; font-size: 14px; margin: 6px 0; }
+    .label { display: block; font-weight: 700; margin-bottom: 6px; font-size: 14px; }
+    .input { border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; font-size: 16px; width: 100%; background: white; appearance: none; }
+    .input.large { font-size: 24px; padding: 14px 16px; text-align: center; letter-spacing: 6px; }
+    .smallInput { width: auto; }
+    .note { color: #64748b; font-size: 13px; margin: 6px 0; }
+    .panelList { display: flex; flex-direction: column; gap: 10px; }
+    .rowCard { background: #f8fafc; border-radius: 18px; padding: 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .rowCard.vertical { flex-direction: column; align-items: stretch; }
+    .formGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; }
+    .formGrid.two { grid-template-columns: 1fr 1fr; }
+    .checkLabel { display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
+    .emptyBox { text-align: center; color: #94a3b8; padding: 24px; }
+    .menuButton { background: rgba(255,255,255,0.92); border-radius: 22px; padding: 18px 12px; box-shadow: 0 4px 18px rgba(15,23,42,0.08); cursor: pointer; border: 0; text-align: center; width: 100%; }
+    .menuIcon { font-size: 28px; margin-bottom: 6px; }
+    .menuTitle { font-weight: 800; font-size: 14px; }
+    .menuDescription { color: #64748b; font-size: 11px; margin-top: 3px; }
+    h2 { margin: 6px 0; font-size: 17px; } h3 { margin: 4px 0; font-size: 15px; }
+    p { margin: 4px 0; font-size: 14px; color: #475569; }
+    select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useMemo } = React;
+
+const STORAGE_KEY = "kids-point-timer-v01";
+const DEFAULT_ADMIN_PASSWORD = "0125";
+
+const initialChildren = [
+  { id: "child-1", name: "たろう", points: 115, timerSeconds: 0, gachaTickets: 2, totalExchangedPoints: 850 },
+  { id: "child-2", name: "じろう", points: 45, timerSeconds: 0, gachaTickets: 1, totalExchangedPoints: 300 },
+];
+const initialEarnRules = [
+  { id: "homework", title: "宿題を終わらせる", points: 10, description: "今日の宿題を最後まで終わらせたら申請できます。", icon: "📘", enabled: true },
+  { id: "prepare", title: "明日の準備", points: 5, description: "ランドセル・持ち物・服の準備ができたら申請できます。", icon: "🎒", enabled: true },
+  { id: "laundry", title: "洗濯物をたたむ", points: 5, description: "家族の洗濯物をたたんだら申請できます。", icon: "🧺", enabled: true },
+  { id: "bath", title: "風呂掃除", points: 10, description: "お風呂をきれいに掃除したら申請できます。", icon: "🛁", enabled: true },
+  { id: "reading", title: "読書15分", points: 5, description: "15分以上読書したら申請できます。", icon: "📚", enabled: true },
+];
+const initialExchangePlans = [
+  { id: "timer-10", title: "10分に交換", points: 10, minutes: 10, description: "10PTを10分のタイマー時間に交換します。", icon: "⏱️" },
+  { id: "timer-60", title: "60分に交換", points: 55, minutes: 60, description: "55PTを60分のタイマー時間に交換します。", icon: "🕐" },
+  { id: "timer-120", title: "120分に交換", points: 100, minutes: 120, description: "100PTを120分のタイマー時間に交換します。", icon: "🕑" },
+];
+const initialGachaRanks = [
+  { rank: "スーパーレア", probability: 1, reward: "60分ボーナス", rewardMinutes: 60, emoji: "🌈" },
+  { rank: "レア", probability: 10, reward: "+20分ボーナス", rewardMinutes: 20, emoji: "💎" },
+  { rank: "コモン", probability: 49, reward: "+5分ボーナス", rewardMinutes: 5, emoji: "⭐" },
+  { rank: "ハズレ", probability: 40, reward: "またチャレンジ", rewardMinutes: 0, emoji: "🍃" },
+];
+const adminItems = [
+  { id: "approvals", title: "ポイント承認", description: "子供からのポイント獲得申請を承認" },
+  { id: "users", title: "子供ID設定", description: "子供ごとの名前を管理" },
+  { id: "earn", title: "ポイント獲得設定", description: "宿題・お手伝いなどの獲得ルールを管理" },
+  { id: "exchange", title: "タイマー交換設定", description: "ポイントとタイマー時間の交換ルールを管理" },
+  { id: "gacha", title: "ガチャ設定", description: "排出率・景品・ガチャ付与条件を管理" },
+  { id: "password", title: "パスワード変更", description: "アドミ画面のパスワードを変更" },
+];
+
+function formatTime(s) { const n = Math.max(0, Number(s) || 0); return `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`; }
+function getTodayKey() { return new Date().toISOString().slice(0, 10); }
+function getPointsUntilNextGacha(t) { const r = (Number(t) || 0) % 1000; return r === 0 ? 1000 : 1000 - r; }
+function drawGacha(rv = Math.random(), rt = initialGachaRanks) { const n = rv * 100; let c = 0; for (const r of rt) { c += r.probability; if (n < c) return r; } return rt[rt.length - 1]; }
+function playChime() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    const ctx = new AC();
+    [523.25, 659.25, 783.99, 1046.5, 783.99, 659.25, 523.25].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "sine"; o.frequency.setValueAtTime(f, ctx.currentTime + i * 0.28);
+      g.gain.setValueAtTime(0.0001, ctx.currentTime + i * 0.28);
+      g.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + i * 0.28 + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i * 0.28 + 0.24);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(ctx.currentTime + i * 0.28); o.stop(ctx.currentTime + i * 0.28 + 0.26);
+    });
+  } catch (e) {}
+}
+
+// ── UIコンポーネント ──
+function Btn({ children, onClick, disabled = false, variant = "primary", type = "button" }) {
+  return <button type={type} onClick={onClick} disabled={disabled} className={`btn ${variant} ${disabled ? "disabled" : ""}`}>{children}</button>;
+}
+function Card({ children, className = "" }) { return <div className={`card ${className}`}>{children}</div>; }
+function Header({ title, subtitle, onBack, icon }) {
+  return <div className="header">{onBack && <Btn variant="secondary" onClick={onBack}>← 戻る</Btn>}<div className="headerIcon">{icon}</div><div><h1>{title}</h1><p>{subtitle}</p></div></div>;
+}
+function StatCard({ label, value, icon }) {
+  return <Card className="statCard"><div className="statIcon">{icon}</div><div><div className="statLabel">{label}</div><div className="statValue">{value}</div></div></Card>;
+}
+function MenuBtn({ title, description, icon, onClick }) {
+  return <button type="button" className="menuButton" onClick={onClick}><div className="menuIcon">{icon}</div><div className="menuTitle">{title}</div><div className="menuDescription">{description}</div></button>;
+}
+function Page({ children }) { return <main className="page">{children}</main>; }
+
+// ── Adminパネル（トップレベル定義） ──
+function ApprovalAdminPanel({ pendingApprovals, approveRequest, rejectRequest, approveAllRequests }) {
+  return <div className="panelList">
+    <div className="noticeBar"><span>現在 {pendingApprovals.length} 件の申請があります。</span><Btn onClick={approveAllRequests} disabled={!pendingApprovals.length}>一括承認</Btn></div>
+    {!pendingApprovals.length ? <div className="emptyBox">承認待ちの申請はありません。</div> :
+      pendingApprovals.map(req => <div key={req.id} className="rowCard"><div><h3>{req.icon} {req.title}</h3><p>{req.childName} / +{req.points}PT / {req.requestedAt}</p></div><div className="buttonRow"><Btn onClick={() => approveRequest(req.id)}>承認</Btn><Btn variant="secondary" onClick={() => rejectRequest(req.id)}>却下</Btn></div></div>)
+    }
+  </div>;
+}
+function EarnAdminPanel({ earnRuleList, setEarnRuleList }) {
+  return <div className="panelList">
+    <Card><h3>新規ルール追加</h3><Btn onClick={() => { const id = `custom-${Date.now()}`; setEarnRuleList(prev => [...prev, { id, title: "新しいお手伝い", description: "内容を編集してください", icon: "✨", points: 5, enabled: true }]); }}>+ 新しいルールを追加</Btn></Card>
+    {earnRuleList.map(rule => <div key={rule.id} className="rowCard vertical"><div className="formGrid">
+      <input className="input" value={rule.title} onChange={e => setEarnRuleList(prev => prev.map(r => r.id === rule.id ? { ...r, title: e.target.value } : r))} />
+      <input className="input" value={rule.description} onChange={e => setEarnRuleList(prev => prev.map(r => r.id === rule.id ? { ...r, description: e.target.value } : r))} />
+      <select className="input" value={rule.points} onChange={e => setEarnRuleList(prev => prev.map(r => r.id === rule.id ? { ...r, points: Number(e.target.value) } : r))}>{[5, 10, 15, 20].map(p => <option key={p} value={p}>{p}PT</option>)}</select>
+      <label className="checkLabel"><input type="checkbox" checked={rule.enabled} onChange={e => setEarnRuleList(prev => prev.map(r => r.id === rule.id ? { ...r, enabled: e.target.checked } : r))} /> 表示する</label>
+      <Btn variant="secondary" onClick={() => setEarnRuleList(prev => prev.filter(r => r.id !== rule.id))}>削除</Btn>
+    </div></div>)}
+  </div>;
+}
+function ExchangeAdminPanel({ exchangePlanList, setExchangePlanList }) {
+  return <div className="panelList">
+    {exchangePlanList.map(plan => <div key={plan.id} className="rowCard vertical">
+      <h3>{plan.icon} {plan.title}</h3>
+      <div className="formGrid two">
+        <label>必要ポイント<select className="input" value={plan.points} onChange={e => setExchangePlanList(prev => prev.map(p => p.id === plan.id ? { ...p, points: Number(e.target.value) } : p))}>{Array.from({ length: 20 }, (_, i) => (i + 1) * 5).map(p => <option key={p} value={p}>{p}PT</option>)}</select></label>
+        <label>交換時間<select className="input" value={plan.minutes} onChange={e => setExchangePlanList(prev => prev.map(p => p.id === plan.id ? { ...p, minutes: Number(e.target.value) } : p))}>{Array.from({ length: 12 }, (_, i) => (i + 1) * 10).map(m => <option key={m} value={m}>{m}分</option>)}</select></label>
+      </div>
+    </div>)}
+  </div>;
+}
+function GachaAdminPanel({ gachaRankList, setGachaRankList }) {
+  return <div className="panelList">
+    <div className="note">ガチャは累計1000pt交換ごとに1回付与されます。</div>
+    {gachaRankList.map(rank => <div key={rank.rank} className="rowCard">
+      <div><h3>{rank.emoji} {rank.rank}</h3><p>{rank.probability}% / {rank.reward}</p></div>
+      <select className="input smallInput" value={rank.rewardMinutes} onChange={e => { const v = Number(e.target.value); setGachaRankList(prev => prev.map(r => r.rank === rank.rank ? { ...r, rewardMinutes: v, reward: v > 0 ? `+${v}分ボーナス` : "またチャレンジ" } : r)); }}>
+        <option value={0}>0分</option><option value={5}>5分</option><option value={20}>20分</option><option value={60}>60分</option>
+      </select>
+    </div>)}
+  </div>;
+}
+function UserAdminPanel({ children, setChildren, resetLocalData }) {
+  return <div className="panelList">
+    {children.map(child => <div key={child.id} className="rowCard vertical"><div className="formGrid two">
+      <label>名前<input className="input" value={child.name} onChange={e => setChildren(prev => prev.map(c => c.id === child.id ? { ...c, name: e.target.value } : c))} /></label>
+      <div className="note">累計交換：{child.totalExchangedPoints || 0}pt</div>
+    </div></div>)}
+    <Btn variant="danger" onClick={resetLocalData}>データを初期化</Btn>
+  </div>;
+}
+function PasswordAdminPanel({ adminPassword, setAdminPassword }) {
+  const [cur, setCur] = useState(""); const [nw, setNw] = useState(""); const [conf, setConf] = useState(""); const [msg, setMsg] = useState(null);
+  const handle = () => {
+    if (cur !== adminPassword) { setMsg({ type: "error", text: "現在のパスワードが違います" }); return; }
+    if (nw.length < 4) { setMsg({ type: "error", text: "新しいパスワードは4文字以上にしてください" }); return; }
+    if (nw !== conf) { setMsg({ type: "error", text: "新しいパスワードが一致しません" }); return; }
+    setAdminPassword(nw); setCur(""); setNw(""); setConf(""); setMsg({ type: "success", text: "パスワードを変更しました" });
+  };
+  return <div className="panelList">
+    {msg && <div className={msg.type === "success" ? "successBox" : "errorText"}>{msg.text}</div>}
+    <div className="rowCard vertical">
+      <label className="label">現在のパスワード<input type="password" className="input" value={cur} onChange={e => { setCur(e.target.value); setMsg(null); }} placeholder="現在のパスワード" /></label>
+      <label className="label">新しいパスワード<input type="password" className="input" value={nw} onChange={e => { setNw(e.target.value); setMsg(null); }} placeholder="4文字以上" /></label>
+      <label className="label">新しいパスワード（確認）<input type="password" className="input" value={conf} onChange={e => { setConf(e.target.value); setMsg(null); }} placeholder="もう一度入力" /></label>
+      <Btn onClick={handle}>パスワードを変更する</Btn>
+    </div>
+  </div>;
+}
+
+// ── メインアプリ ──
+function App() {
+  const [screen, setScreen] = useState("home");
+  const [children, setChildren] = useState(initialChildren);
+  const [earnRuleList, setEarnRuleList] = useState(initialEarnRules);
+  const [exchangePlanList, setExchangePlanList] = useState(initialExchangePlans);
+  const [gachaRankList, setGachaRankList] = useState(initialGachaRanks);
+  const [selectedChildId, setSelectedChildId] = useState(initialChildren[0].id);
+  const [pendingApprovals, setPendingApprovals] = useState([]);
+  const [claimRecords, setClaimRecords] = useState([]);
+  const [adminAuth, setAdminAuth] = useState(false);
+  const [adminPassword, setAdminPassword] = useState(DEFAULT_ADMIN_PASSWORD);
+  const [pwInput, setPwInput] = useState("");
+  const [pwError, setPwError] = useState("");
+  const [selectedEarn, setSelectedEarn] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [selectedAdmin, setSelectedAdmin] = useState(null);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [timerMsg, setTimerMsg] = useState("");
+  const [lastGacha, setLastGacha] = useState(null);
+  const [lastExchange, setLastExchange] = useState(null);
+  const [history, setHistory] = useState(["1000ポイント交換ごとにガチャ +1回", "たろう：宿題を終わらせる +10pt", "じろう：10分に交換 -10pt / タイマー +10分"]);
+
+  // localStorageから読み込み
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return;
+      const d = JSON.parse(saved);
+      if (Array.isArray(d.children)) setChildren(d.children);
+      if (Array.isArray(d.earnRuleList)) setEarnRuleList(d.earnRuleList);
+      if (Array.isArray(d.exchangePlanList)) setExchangePlanList(d.exchangePlanList);
+      if (Array.isArray(d.gachaRankList)) setGachaRankList(d.gachaRankList);
+      if (Array.isArray(d.pendingApprovals)) setPendingApprovals(d.pendingApprovals);
+      if (Array.isArray(d.claimRecords)) setClaimRecords(d.claimRecords);
+      if (Array.isArray(d.history)) setHistory(d.history);
+      if (typeof d.selectedChildId === "string") setSelectedChildId(d.selectedChildId);
+      if (typeof d.adminPassword === "string") setAdminPassword(d.adminPassword);
+    } catch (e) { console.warn("読み込みエラー", e); }
+  }, []);
+
+  // localStorageに保存
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ children, earnRuleList, exchangePlanList, gachaRankList, pendingApprovals, claimRecords, history, selectedChildId, adminPassword }));
+    } catch (e) { console.warn("保存エラー", e); }
+  }, [children, earnRuleList, exchangePlanList, gachaRankList, pendingApprovals, claimRecords, history, selectedChildId, adminPassword]);
+
+  const selectedChild = useMemo(() => children.find(c => c.id === selectedChildId) || children[0], [children, selectedChildId]);
+  const ptUntilGacha = getPointsUntilNextGacha(selectedChild.totalExchangedPoints || 0);
+
+  useEffect(() => {
+    if (!timerRunning) return;
+    const iv = setInterval(() => {
+      setChildren(prev => prev.map(child => {
+        if (child.id !== selectedChildId) return child;
+        if (child.timerSeconds <= 1) { setTimerRunning(false); setTimerMsg("時間になりました。おしまいです！"); playChime(); return { ...child, timerSeconds: 0 }; }
+        return { ...child, timerSeconds: child.timerSeconds - 1 };
+      }));
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [timerRunning, selectedChildId]);
+
+  const updSel = f => setChildren(prev => prev.map(c => c.id === selectedChildId ? f(c) : c));
+  const addHist = t => setHistory(prev => [t, ...prev].slice(0, 15));
+  const goHome = () => { setAdminAuth(false); setScreen("home"); };
+  const isClaimedToday = id => { const today = getTodayKey(); return claimRecords.some(r => r.childId === selectedChild.id && r.ruleId === id && r.date === today && ["pending", "approved"].includes(r.status)); };
+
+  const requestApproval = () => {
+    if (!selectedEarn || !selectedChild) return;
+    const today = getTodayKey();
+    if (isClaimedToday(selectedEarn.id)) { addHist(`${selectedChild.name}：${selectedEarn.title} は今日は申請済み`); setScreen("earn"); return; }
+    const req = { id: `approval-${Date.now()}`, childId: selectedChild.id, childName: selectedChild.name, ruleId: selectedEarn.id, title: selectedEarn.title, points: selectedEarn.points, icon: selectedEarn.icon, date: today, requestedAt: new Date().toLocaleString("ja-JP") };
+    setPendingApprovals(prev => [req, ...prev]);
+    setClaimRecords(prev => [{ id: req.id, childId: req.childId, ruleId: req.ruleId, date: today, status: "pending" }, ...prev]);
+    addHist(`${selectedChild.name}：${selectedEarn.title} ${selectedEarn.points}pt 承認待ち`); setScreen("earn");
+  };
+  const approveReq = id => { const req = pendingApprovals.find(r => r.id === id); if (!req) return; setChildren(prev => prev.map(c => c.id === req.childId ? { ...c, points: c.points + req.points } : c)); setPendingApprovals(prev => prev.filter(r => r.id !== id)); setClaimRecords(prev => prev.map(r => r.id === id ? { ...r, status: "approved" } : r)); addHist(`${req.childName}：${req.title} +${req.points}pt 承認済み`); };
+  const rejectReq = id => { const req = pendingApprovals.find(r => r.id === id); setPendingApprovals(prev => prev.filter(r => r.id !== id)); setClaimRecords(prev => prev.map(r => r.id === id ? { ...r, status: "rejected" } : r)); if (req) addHist(`${req.childName}：${req.title} ${req.points}pt 却下`); };
+  const approveAll = () => { if (!pendingApprovals.length) return; setChildren(prev => prev.map(c => { const pts = pendingApprovals.filter(r => r.childId === c.id).reduce((s, r) => s + r.points, 0); return pts > 0 ? { ...c, points: c.points + pts } : c; })); const ids = new Set(pendingApprovals.map(r => r.id)); setClaimRecords(prev => prev.map(r => ids.has(r.id) ? { ...r, status: "approved" } : r)); addHist(`承認待ち ${pendingApprovals.length}件を一括承認`); setPendingApprovals([]); };
+  const loginAdmin = () => { if (pwInput === adminPassword) { setAdminAuth(true); setPwInput(""); setPwError(""); setScreen("admin"); return; } setPwError("パスワードが違います"); };
+  const exchangePts = () => {
+    if (!selectedPlan || selectedChild.points < selectedPlan.points) return;
+    updSel(c => { const tot = (c.totalExchangedPoints || 0) + selectedPlan.points; const gained = Math.floor(tot / 1000) - Math.floor((c.totalExchangedPoints || 0) / 1000); return { ...c, points: c.points - selectedPlan.points, timerSeconds: c.timerSeconds + selectedPlan.minutes * 60, totalExchangedPoints: tot, gachaTickets: c.gachaTickets + gained }; });
+    const nt = (selectedChild.totalExchangedPoints || 0) + selectedPlan.points; const gained = Math.floor(nt / 1000) - Math.floor((selectedChild.totalExchangedPoints || 0) / 1000); const gm = gained > 0 ? ` / ガチャ +${gained}回` : "";
+    setLastExchange(selectedPlan); addHist(`${selectedChild.name}：${selectedPlan.title} -${selectedPlan.points}pt / タイマー +${selectedPlan.minutes}分${gm}`); setScreen("exchange");
+  };
+  const runGacha = () => { if (selectedChild.gachaTickets <= 0) return; const res = drawGacha(undefined, gachaRankList); setLastGacha(res); updSel(c => ({ ...c, gachaTickets: c.gachaTickets - 1, timerSeconds: c.timerSeconds + res.rewardMinutes * 60 })); const tm = res.rewardMinutes > 0 ? ` / タイマー +${res.rewardMinutes}分` : ""; addHist(`${selectedChild.name}：ガチャ ${res.rank} / ${res.reward}${tm}`); setScreen("gacha-result"); };
+  const resetData = () => { if (!window.confirm("データを初期化しますか？")) return; setChildren(initialChildren); setEarnRuleList(initialEarnRules); setExchangePlanList(initialExchangePlans); setGachaRankList(initialGachaRanks); setPendingApprovals([]); setClaimRecords([]); setHistory(["データを初期化しました"]); setSelectedChildId(initialChildren[0].id); setScreen("home"); };
+
+  // パスワード入力UI（共通JSX）
+  const loginUI = (
+    <Page>
+      <Header title="アドミ認証" subtitle="管理画面に入るにはパスワードが必要です" onBack={goHome} icon="🔐" />
+      <Card>
+        <label className="label">パスワード</label>
+        <input type="password" value={pwInput} onChange={e => { setPwInput(e.target.value); setPwError(""); }} onKeyDown={e => e.key === "Enter" && loginAdmin()} className="input large" placeholder="****" />
+        {pwError && <div className="errorText">{pwError}</div>}
+        <Btn onClick={loginAdmin}>アドミ画面に入る</Btn>
+      </Card>
+    </Page>
+  );
+
+  let content;
+  if (screen === "earn") content = (
+    <Page>
+      <Header title="ポイント獲得" subtitle="各ルールは1日1回まで申請できます" onBack={goHome} icon="➕" />
+      <div className="grid2">{earnRuleList.filter(r => r.enabled).map(rule => { const c = isClaimedToday(rule.id); return (<button type="button" key={rule.id} disabled={c} className={`itemCard ${c ? "muted" : ""}`} onClick={() => { setSelectedEarn(rule); setScreen("earn-detail"); }}><div className="bigIcon">{rule.icon}</div><h2>{rule.title}</h2><p>{rule.description}</p><div className="chips"><span className="chip plus">+{rule.points}pt</span>{c && <span className="chip neutral">今日申請済み</span>}</div></button>); })}</div>
+    </Page>
+  );
+  else if (screen === "earn-detail" && selectedEarn) { const c = isClaimedToday(selectedEarn.id); content = (<Page><Header title="獲得申請" subtitle="内容を確認して申請" onBack={() => setScreen("earn")} icon="✅" /><Card><div className="bigIcon">{selectedEarn.icon}</div><h2>{selectedEarn.title}</h2><p>{selectedEarn.description}</p><div className="highlight">獲得ポイント：+{selectedEarn.points}pt</div><Btn onClick={requestApproval} disabled={c}>{c ? "今日は申請済み" : "ポイント獲得を申請する"}</Btn><p className="note">申請後、アドミ画面で親が承認するとポイントが加算されます。</p></Card></Page>); }
+  else if (screen === "exchange") content = (
+    <Page>
+      <Header title="タイマーに交換" subtitle="ポイント利用はタイマー時間への交換のみ" onBack={goHome} icon="⏱️" />
+      <div className="statsGrid small"><StatCard label="現在ポイント" value={`${selectedChild.points}pt`} icon="⭐" /><StatCard label="タイマー残時間" value={formatTime(selectedChild.timerSeconds)} icon="⏱️" /><StatCard label="次のガチャ" value={`あと${ptUntilGacha}pt`} icon="🚀" /></div>
+      {lastExchange && <div className="successBox">交換完了：{lastExchange.points}PT を {lastExchange.minutes}分 に交換しました。</div>}
+      <div className="grid3">{exchangePlanList.map(plan => { const d = selectedChild.points < plan.points; return (<button type="button" key={plan.id} disabled={d} className={`itemCard ${d ? "muted" : ""}`} onClick={() => { setSelectedPlan(plan); setScreen("exchange-detail"); }}><div className="bigIcon">{plan.icon}</div><h2>{plan.title}</h2><p>{plan.description}</p><div className="chips"><span className="chip minus">-{plan.points}PT</span><span className="chip time">+{plan.minutes}分</span></div></button>); })}</div>
+    </Page>
+  );
+  else if (screen === "exchange-detail" && selectedPlan) content = (<Page><Header title="交換確認" subtitle="ポイントをタイマー時間に交換" onBack={() => setScreen("exchange")} icon="⏱️" /><Card><div className="bigIcon">{selectedPlan.icon}</div><h2>{selectedPlan.title}</h2><p>{selectedPlan.description}</p><div className="statsGrid small"><StatCard label="現在ポイント" value={`${selectedChild.points}pt`} icon="⭐" /><StatCard label="使うポイント" value={`-${selectedPlan.points}pt`} icon="🎟️" /><StatCard label="増える時間" value={`+${selectedPlan.minutes}分`} icon="⏰" /></div><Btn onClick={exchangePts} disabled={selectedChild.points < selectedPlan.points}>タイマー時間に交換する</Btn></Card></Page>);
+  else if (screen === "timer") content = (<Page><Header title="タイマー" subtitle="交換で増えた時間をカウント" onBack={goHome} icon="⏱️" /><Card className="timerCard">{timerMsg && <div className="successBox">🔔 {timerMsg}</div>}<div className="timerLabel">残り時間</div><div className="timerDisplay">{formatTime(selectedChild.timerSeconds)}</div><div className="buttonRow"><Btn onClick={() => { setTimerMsg(""); setTimerRunning(true); }} disabled={selectedChild.timerSeconds <= 0 || timerRunning}>開始</Btn><Btn variant="secondary" onClick={() => setTimerRunning(false)} disabled={!timerRunning}>一時停止</Btn><Btn variant="secondary" onClick={() => { setTimerRunning(false); updSel(c => ({ ...c, timerSeconds: 0 })); }} disabled={selectedChild.timerSeconds <= 0}>終了</Btn></div></Card></Page>);
+  else if (screen === "gacha") content = (<Page><Header title="ガチャ" subtitle="1000pt交換ごとに1回付与" onBack={goHome} icon="🎁" /><Card className="center"><div className="statLabel">回せる回数</div><div className="gachaCount">{selectedChild.gachaTickets}回</div><p>次のガチャまであと{ptUntilGacha}pt</p><Btn onClick={runGacha} disabled={selectedChild.gachaTickets <= 0}>ガチャを回す</Btn></Card><div className="grid4">{gachaRankList.map(r => <Card key={r.rank} className="center"><div className="bigIcon">{r.emoji}</div><h3>{r.rank}</h3><p>{r.probability}%</p><p>{r.reward}</p></Card>)}</div></Page>);
+  else if (screen === "gacha-result" && lastGacha) content = (<Page><Header title="ガチャ結果" subtitle="結果発表" onBack={() => setScreen("gacha")} icon="🏆" /><Card className="center"><div className="resultIcon">{lastGacha.emoji}</div><div className="statLabel">結果</div><h2>{lastGacha.rank}</h2><div className="highlight">{lastGacha.reward}</div>{lastGacha.rewardMinutes > 0 && <p>タイマーに +{lastGacha.rewardMinutes}分 加算しました。</p>}<div className="buttonRow centerRow"><Btn onClick={() => setScreen("gacha")}>もう一度回す</Btn><Btn variant="secondary" onClick={goHome}>メインへ戻る</Btn></div></Card></Page>);
+  else if (screen === "admin-login") content = loginUI;
+  else if (screen === "admin") content = adminAuth ? (
+    <Page>
+      <Header title="アドミ画面" subtitle="親・管理者用の各種設定" onBack={goHome} icon="🛡️" />
+      <div className="noticeBar"><span>承認待ち：<b>{pendingApprovals.length}件</b></span><Btn variant="secondary" onClick={goHome}>ホームへ戻る</Btn></div>
+      <div className="grid2">{adminItems.map(item => <button type="button" key={item.id} className="itemCard" onClick={() => { setSelectedAdmin(item); setScreen("admin-detail"); }}><h2>{item.title}</h2><p>{item.description}</p></button>)}</div>
+    </Page>
+  ) : loginUI;
+  else if (screen === "admin-detail" && adminAuth && selectedAdmin) {
+    let panel = null;
+    if (selectedAdmin.id === "approvals") panel = <ApprovalAdminPanel pendingApprovals={pendingApprovals} approveRequest={approveReq} rejectRequest={rejectReq} approveAllRequests={approveAll} />;
+    else if (selectedAdmin.id === "users") panel = <UserAdminPanel children={children} setChildren={setChildren} resetLocalData={resetData} />;
+    else if (selectedAdmin.id === "earn") panel = <EarnAdminPanel earnRuleList={earnRuleList} setEarnRuleList={setEarnRuleList} />;
+    else if (selectedAdmin.id === "exchange") panel = <ExchangeAdminPanel exchangePlanList={exchangePlanList} setExchangePlanList={setExchangePlanList} />;
+    else if (selectedAdmin.id === "gacha") panel = <GachaAdminPanel gachaRankList={gachaRankList} setGachaRankList={setGachaRankList} />;
+    else if (selectedAdmin.id === "password") panel = <PasswordAdminPanel adminPassword={adminPassword} setAdminPassword={setAdminPassword} />;
+    content = (<Page><Header title={selectedAdmin.title} subtitle={selectedAdmin.description} onBack={() => setScreen("admin")} icon="⚙️" /><Card>{panel}</Card></Page>);
+  }
+  else if (screen === "admin-detail") content = loginUI;
+  else if (screen === "history") content = (<Page><Header title="履歴" subtitle="最近の操作履歴" onBack={goHome} icon="📋" /><div className="panelList">{history.map((item, i) => <div key={`${item}-${i}`} className="rowCard"><span>{item}</span></div>)}</div></Page>);
+  else content = (
+    <Page>
+      <Header title="ポイントタイマー" subtitle="宿題・お手伝いをポイントにして、タイマー時間に交換" icon="🏠" />
+      <div className="childSwitch"><span>👤</span>{children.map(c => <Btn key={c.id} variant={c.id === selectedChildId ? "primary" : "secondary"} onClick={() => { setTimerRunning(false); setLastExchange(null); setSelectedChildId(c.id); }}>{c.name}</Btn>)}</div>
+      <div className="statsGrid">
+        <StatCard label="ポイント" value={`${selectedChild.points}pt`} icon="⭐" />
+        <StatCard label="タイマー" value={formatTime(selectedChild.timerSeconds)} icon="⏱️" />
+        <StatCard label="ガチャ" value={`${selectedChild.gachaTickets}回`} icon="🎁" />
+        <StatCard label="累計交換" value={`${selectedChild.totalExchangedPoints || 0}pt`} icon="🎯" />
+        <StatCard label="次のガチャ" value={`あと${ptUntilGacha}pt`} icon="🚀" />
+      </div>
+      <div className="menuGrid">
+        <MenuBtn title="ポイントをためる" description="宿題・お手伝いを申請" icon="➕" onClick={() => setScreen("earn")} />
+        <MenuBtn title="タイマーに交換" description="ポイントをタイマー時間に交換" icon="⏱️" onClick={() => setScreen("exchange")} />
+        <MenuBtn title="タイマー" description="交換で増えた時間をカウント" icon="🕹️" onClick={() => setScreen("timer")} />
+        <MenuBtn title="ガチャ" description="チケットを使ってボーナス獲得" icon="🎁" onClick={() => setScreen("gacha")} />
+        <MenuBtn title="アドミ" description="親がルール・承認を管理" icon="⚙️" onClick={() => { setAdminAuth(false); setPwInput(""); setPwError(""); setScreen("admin-login"); }} />
+        <MenuBtn title="履歴" description="最近の操作履歴を見る" icon="📋" onClick={() => setScreen("history")} />
+      </div>
+    </Page>
+  );
+
+  return content;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
