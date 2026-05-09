@@ -119,6 +119,7 @@ const adminItems = [
   { id: "exchange", title: "タイマー交換設定", description: "ポイントとタイマー時間の交換ルールを管理" },
   { id: "gacha", title: "ガチャ設定", description: "排出率・景品・ガチャ付与条件を管理" },
   { id: "password", title: "パスワード変更", description: "アドミ画面のパスワードを変更" },
+  { id: "reset", title: "データ初期化", description: "ポイント・ガチャ・累積交換をすべてリセット" },
 ];
 
 function formatTime(s) { const n = Math.max(0, Number(s) || 0); return `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`; }
@@ -201,13 +202,49 @@ function GachaAdminPanel({ gachaRankList, setGachaRankList }) {
     </div>)}
   </div>;
 }
-function UserAdminPanel({ children, setChildren, resetLocalData }) {
+function UserAdminPanel({ children, setChildren }) {
+  // 編集中の名前を別stateで管理（保存前は元の名前を表示）
+  const [draftNames, setDraftNames] = useState(() =>
+    Object.fromEntries(children.map(c => [c.id, c.name]))
+  );
+  const [savedMsg, setSavedMsg] = useState({});
+
+  const saveName = (childId) => {
+    const newName = (draftNames[childId] || "").trim();
+    if (!newName) return;
+    setChildren(prev => prev.map(c => {
+      if (c.id !== childId) return c;
+      const nameChanged = c.name !== newName;
+      return {
+        ...c,
+        name: newName,
+        // 名前が変わったらポイント系をリセット
+        ...(nameChanged ? { points: 0, gachaTickets: 0, totalExchangedPoints: 0, timerSeconds: 0 } : {}),
+      };
+    }));
+    setSavedMsg(prev => ({ ...prev, [childId]: true }));
+    setTimeout(() => setSavedMsg(prev => ({ ...prev, [childId]: false })), 2000);
+  };
+
   return <div className="panelList">
-    {children.map(child => <div key={child.id} className="rowCard vertical"><div className="formGrid two">
-      <label>名前<input className="input" value={child.name} onChange={e => setChildren(prev => prev.map(c => c.id === child.id ? { ...c, name: e.target.value } : c))} /></label>
-      <div className="note">累計交換：{child.totalExchangedPoints || 0}pt</div>
-    </div></div>)}
-    <Btn variant="danger" onClick={resetLocalData}>データを初期化</Btn>
+    <div className="note">⚠️ 名前を変更して保存すると、そのこのポイント・ガチャ・累積交換がリセットされます。</div>
+    {children.map(child => (
+      <div key={child.id} className="rowCard vertical">
+        <div style={{ fontWeight: 700, marginBottom: 4 }}>{child.name}</div>
+        <div className="note">累計交換：{child.totalExchangedPoints || 0}pt ／ 現在：{child.points}pt ／ ガチャ：{child.gachaTickets}回</div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
+          <input
+            className="input"
+            style={{ flex: 1 }}
+            value={draftNames[child.id] ?? child.name}
+            onChange={e => setDraftNames(prev => ({ ...prev, [child.id]: e.target.value }))}
+            placeholder="新しい名前"
+          />
+          <Btn onClick={() => saveName(child.id)}>保存</Btn>
+        </div>
+        {savedMsg[child.id] && <div className="successBox" style={{ marginTop: 6 }}>保存しました！</div>}
+      </div>
+    ))}
   </div>;
 }
 function PasswordAdminPanel({ adminPassword, setAdminPassword }) {
@@ -229,7 +266,24 @@ function PasswordAdminPanel({ adminPassword, setAdminPassword }) {
   </div>;
 }
 
-// ── メインアプリ ──
+function ResetAdminPanel({ onReset }) {
+  const [confirmed, setConfirmed] = useState(false);
+  if (!confirmed) return (
+    <div className="panelList">
+      <div className="note">全員のポイント・ガチャ枚数・累積交換ポイント・タイマー残時間を0にリセットします。名前やルール設定は変わりません。</div>
+      <Btn variant="danger" onClick={() => setConfirmed(true)}>リセットする</Btn>
+    </div>
+  );
+  return (
+    <div className="panelList">
+      <div className="errorText" style={{ fontWeight: 700, fontSize: 16 }}>本当にリセットしますか？この操作は元に戻せません。</div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <Btn variant="danger" onClick={onReset}>はい、リセットする</Btn>
+        <Btn variant="secondary" onClick={() => setConfirmed(false)}>キャンセル</Btn>
+      </div>
+    </div>
+  );
+}
 function App() {
   const [screen, setScreen] = useState("home");
   const [children, setChildren] = useState(initialChildren);
@@ -317,7 +371,13 @@ function App() {
     setLastExchange(selectedPlan); addHist(`${selectedChild.name}：${selectedPlan.title} -${selectedPlan.points}pt / タイマー +${selectedPlan.minutes}分${gm}`); setScreen("exchange");
   };
   const runGacha = () => { if (selectedChild.gachaTickets <= 0) return; const res = drawGacha(undefined, gachaRankList); setLastGacha(res); updSel(c => ({ ...c, gachaTickets: c.gachaTickets - 1, timerSeconds: c.timerSeconds + res.rewardMinutes * 60 })); const tm = res.rewardMinutes > 0 ? ` / タイマー +${res.rewardMinutes}分` : ""; addHist(`${selectedChild.name}：ガチャ ${res.rank} / ${res.reward}${tm}`); setScreen("gacha-result"); };
-  const resetData = () => { if (!window.confirm("データを初期化しますか？")) return; setChildren(initialChildren); setEarnRuleList(initialEarnRules); setExchangePlanList(initialExchangePlans); setGachaRankList(initialGachaRanks); setPendingApprovals([]); setClaimRecords([]); setHistory(["データを初期化しました"]); setSelectedChildId(initialChildren[0].id); setScreen("home"); };
+  // ポイント・ガチャ・累積交換・タイマーを0にリセット（名前・ルール設定は保持）
+  const resetPoints = () => {
+    setChildren(prev => prev.map(c => ({ ...c, points: 0, gachaTickets: 0, totalExchangedPoints: 0, timerSeconds: 0 })));
+    setPendingApprovals([]); setClaimRecords([]);
+    addHist("データ初期化：全員のポイント・ガチャ・累積をリセット");
+    setScreen("admin");
+  };
 
   // パスワード入力UI（共通JSX）
   const loginUI = (
@@ -363,11 +423,12 @@ function App() {
   else if (screen === "admin-detail" && adminAuth && selectedAdmin) {
     let panel = null;
     if (selectedAdmin.id === "approvals") panel = <ApprovalAdminPanel pendingApprovals={pendingApprovals} approveRequest={approveReq} rejectRequest={rejectReq} approveAllRequests={approveAll} />;
-    else if (selectedAdmin.id === "users") panel = <UserAdminPanel children={children} setChildren={setChildren} resetLocalData={resetData} />;
+    else if (selectedAdmin.id === "users") panel = <UserAdminPanel children={children} setChildren={setChildren} />;
     else if (selectedAdmin.id === "earn") panel = <EarnAdminPanel earnRuleList={earnRuleList} setEarnRuleList={setEarnRuleList} />;
     else if (selectedAdmin.id === "exchange") panel = <ExchangeAdminPanel exchangePlanList={exchangePlanList} setExchangePlanList={setExchangePlanList} />;
     else if (selectedAdmin.id === "gacha") panel = <GachaAdminPanel gachaRankList={gachaRankList} setGachaRankList={setGachaRankList} />;
     else if (selectedAdmin.id === "password") panel = <PasswordAdminPanel adminPassword={adminPassword} setAdminPassword={setAdminPassword} />;
+    else if (selectedAdmin.id === "reset") panel = <ResetAdminPanel onReset={resetPoints} />;
     content = (<Page><Header title={selectedAdmin.title} subtitle={selectedAdmin.description} onBack={() => setScreen("admin")} icon="⚙️" /><Card>{panel}</Card></Page>);
   }
   else if (screen === "admin-detail") content = loginUI;
